@@ -2,7 +2,7 @@ mod config;
 mod email;
 mod log;
 mod utils;
-mod wlt_api;
+mod wlt;
 
 use crate::config::Config;
 use crate::log::log;
