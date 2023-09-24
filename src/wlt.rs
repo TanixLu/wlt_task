@@ -9,13 +9,13 @@ use crate::utils::{find_str_between, AnyResult};
 
 const WLT_URL: &str = "http://202.38.64.59/cgi-bin/ip";
 
-struct Page {
-    url: String,
-    status: StatusCode,
-    text: String,
+pub struct Page {
+    pub url: String,
+    pub status: StatusCode,
+    pub text: String,
 }
 
-enum WltPage {
+pub enum WltPage {
     LoginPage(Page),
     ControlPage(Page),
 }
@@ -49,7 +49,7 @@ impl WltPage {
         }
     }
 
-    fn search_ip(&self) -> AnyResult<String> {
+    pub fn search_ip(&self) -> AnyResult<String> {
         match self {
             WltPage::LoginPage(page) => {
                 let html = Html::parse_document(&page.text);
@@ -87,7 +87,7 @@ impl WltPage {
     }
 }
 
-struct WltClient {
+pub struct WltClient {
     client: Client,
     cookie_store: std::sync::Arc<reqwest_cookie_store::CookieStoreMutex>,
     name: String,
@@ -97,7 +97,7 @@ struct WltClient {
 }
 
 impl WltClient {
-    fn new(name: &str, password: &str, type_: u8, exp: u32, cookie: &str) -> AnyResult<Self> {
+    pub fn new(name: &str, password: &str, type_: u8, exp: u32, cookie: &str) -> AnyResult<Self> {
         let cookie_store = reqwest_cookie_store::CookieStore::load_json(cookie.as_bytes())?;
         let cookie_store = reqwest_cookie_store::CookieStoreMutex::new(cookie_store);
         let cookie_store = std::sync::Arc::new(cookie_store);
@@ -114,7 +114,7 @@ impl WltClient {
         })
     }
 
-    fn cookie_string(&self) -> AnyResult<String> {
+    pub fn get_cookie_string(&self) -> AnyResult<String> {
         let mut buf = Vec::new();
         self.cookie_store
             .lock()
@@ -123,12 +123,12 @@ impl WltClient {
         Ok(String::from_utf8(buf)?)
     }
 
-    fn access_page(&self) -> AnyResult<WltPage> {
+    pub fn access_page(&self) -> AnyResult<WltPage> {
         let resp = self.client.get(WLT_URL).send()?;
         WltPage::new(WLT_URL, resp)
     }
 
-    fn login(&self, ip: &str) -> AnyResult<WltPage> {
+    pub fn login(&self, ip: &str) -> AnyResult<WltPage> {
         let go = GBK.encode("登录账户").0;
         let go = &urlencoding::encode_binary(&go);
         let login_form = [
@@ -154,7 +154,7 @@ impl WltClient {
         }
     }
 
-    fn set_network(&self) -> AnyResult<WltPage> {
+    pub fn set_wlt(&self) -> AnyResult<WltPage> {
         let go = GBK.encode("开通网络").0;
         let go = &urlencoding::encode_binary(&go);
         let url = format!(

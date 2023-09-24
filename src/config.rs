@@ -35,19 +35,19 @@ const CONFIG_COMMENT: &str = "
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    name: String,
-    password: String,
+    pub name: String,
+    pub password: String,
     #[serde(rename = "type")]
-    type_: u8,
-    exp: u32,
-    ip: String,
-    cookie: String,
-    email_server: String,
-    email_username: String,
-    email_password: String,
-    email_to_list: Vec<String>,
-    email_subject: String,
-    email_body: String,
+    pub type_: u8,
+    pub exp: u32,
+    pub ip: String,
+    pub cookie: String,
+    pub email_server: String,
+    pub email_username: String,
+    pub email_password: String,
+    pub email_to_list: Vec<String>,
+    pub email_subject: String,
+    pub email_body: String,
 }
 
 impl Default for Config {
