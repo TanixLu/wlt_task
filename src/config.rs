@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::AnyResult;
+use crate::utils::{get_machine_uid, str_decode, str_encode, AnyResult};
 
 const CONFIG_PATH: &str = "config.toml";
-const CONFIG_COMMENT: &str = "
+const CONFIG_COMMENT: &str = r#"
 # name：网络通用户名
 # password：网络通密码
 # type：出口选择
@@ -27,10 +27,10 @@ const CONFIG_COMMENT: &str = "
 # email_server：邮件服务器地址
 # email_username：邮箱
 # email_password：邮箱密码（SMTP授权码）
-# email_to_list：邮件发送列表，可以填自己的邮箱，可以填多个，留空则禁用邮件功能
+# email_to_list：邮件发送列表，可以填自己的邮箱，如["10000@qq.com", "10000@mail.ustc.edu.cn"]，留空则禁用邮件功能
 # email_subject：邮件主题（标题）
 # email_body：邮件内容，其中的{old_ip}会被替换为旧的ip，{new_ip}会被替换为新的ip
-";
+"#;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -70,7 +70,11 @@ impl Default for Config {
 
 impl Config {
     pub fn save(&self) -> AnyResult<()> {
-        let config_string = toml::to_string_pretty(self)?;
+        let mut config_string = toml::to_string_pretty(self)?;
+        if !self.password.is_empty() && str_decode(&self.password, get_machine_uid()?).is_err() {
+            let encoded_password = str_encode(&self.password, get_machine_uid()?)?;
+            config_string = config_string.replace(&self.password, &encoded_password);
+        }
         let content = format!("{}\n{}", config_string, CONFIG_COMMENT);
         std::fs::write(CONFIG_PATH, content)?;
         Ok(())
@@ -84,7 +88,15 @@ impl Config {
             Ok(config)
         } else {
             let config = std::fs::read_to_string(CONFIG_PATH)?;
-            toml::from_str::<Config>(&config).map_err(|e| e.into())
+            let mut config = toml::from_str::<Config>(&config)?;
+            if let Ok(password) = str_decode(&config.password, get_machine_uid()?) {
+                config.password = password;
+            } else if !config.password.is_empty() {
+                // encode password
+                config.save()?;
+            }
+
+            Ok(config)
         }
     }
 }
