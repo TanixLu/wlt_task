@@ -143,9 +143,18 @@ impl WltClient {
             .send()?;
         self.update_rn(&resp)?;
         let wlt_page = WltPage::new(WLT_URL, resp)?;
-        if wlt_page.text.contains("用户名或密码错误") {
-            Err("用户名或密码错误".into())
-        } else if wlt_page.status != StatusCode::OK {
+        const ERR_STRS: [&str; 4] = [
+            "输入的用户名为空",
+            "输入的密码为空",
+            "用户名不存在",
+            "用户名或密码错误",
+        ];
+        for err_str in ERR_STRS {
+            if wlt_page.text.contains(err_str) {
+                return Err(err_str.into());
+            }
+        }
+        if wlt_page.status != StatusCode::OK {
             Err(format!(
                 "登录账户失败\nurl: {}\nform: {:?}\nstatus: {}\ntext: {}",
                 WLT_URL, login_form, wlt_page.status, wlt_page.text

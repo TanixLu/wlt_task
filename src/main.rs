@@ -7,7 +7,7 @@ mod wlt;
 use config::Config;
 use email::send_email;
 use log::{log, log_append};
-use utils::AnyResult;
+use utils::{replace_password, AnyResult};
 use wlt::{WltClient, WltPageType};
 
 fn main() -> AnyResult<()> {
@@ -26,6 +26,15 @@ fn main() -> AnyResult<()> {
         let new_ip = match wlt_page.page_type()? {
             WltPageType::LoginPage => {
                 wlt_client.login(&new_ip)?;
+                if wlt_client.get_rn() != &config.rn {
+                    log(&format!(
+                        "old_rn: {}, new_rn: {}",
+                        config.rn,
+                        wlt_client.get_rn()
+                    ));
+                    config.rn = wlt_client.get_rn().to_owned();
+                    config.save()?;
+                }
                 let set_wlt_page = wlt_client.set_wlt()?;
                 set_wlt_page.search_ip()?
             }
@@ -49,38 +58,28 @@ fn main() -> AnyResult<()> {
                 &config.email_subject,
                 &body,
             );
-        } else {
-            log_append(".");
         }
 
-        if wlt_client.get_rn() != &config.rn {
-            log(&format!(
-                "old_rn: {} new_rn: {}",
-                config.rn,
-                wlt_client.get_rn()
-            ));
-            config.rn = wlt_client.get_rn().to_owned();
-            config.save()?;
-        }
-
+        log_append(".");
         Ok(())
     };
 
     if let Err(e) = try_main() {
-        let e = e.to_string();
-        log(&e);
-        let config = Config::load()?;
-        let e = e.replace(&config.password, "***");
-        let encoded_password = urlencoding::encode(&config.password).to_string();
-        let e = e.replace(&encoded_password, "***");
-        send_email(
-            &config.email_server,
-            &config.email_username,
-            &config.email_password,
-            &config.email_to_list,
-            "WLT Task Error",
-            &e,
-        );
+        let mut e = e.to_string();
+        if let Ok(config) = Config::load() {
+            e = replace_password(e, config.password, "***");
+            log(&e);
+            send_email(
+                &config.email_server,
+                &config.email_username,
+                &config.email_password,
+                &config.email_to_list,
+                "WLT Task Error",
+                &e,
+            );
+        } else {
+            log(&e);
+        }
     }
 
     Ok(())

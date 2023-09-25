@@ -2,9 +2,16 @@ use std::io::{Read, Seek, Write};
 
 use chrono::Local;
 
-use crate::config::Config;
-
 const LOG_PATH: &str = "log.txt";
+
+pub fn log_append(msg: impl AsRef<str>) {
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(LOG_PATH)
+        .unwrap();
+    file.write_all(msg.as_ref().as_bytes()).unwrap();
+}
 
 fn need_new_line() -> bool {
     if !std::path::Path::new(LOG_PATH).exists() {
@@ -34,24 +41,5 @@ pub fn log(msg: impl AsRef<str>) {
         Local::now().format("%Y-%m-%d %H:%M:%S"),
         msg.as_ref()
     ));
-    if let Ok(config) = Config::load() {
-        log_text = log_text.replace(&config.password, "***");
-        let encoded_password = urlencoding::encode(&config.password).to_string();
-        log_text = log_text.replace(&encoded_password, "***");
-    }
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(LOG_PATH)
-        .unwrap();
-    file.write_all(log_text.as_bytes()).unwrap();
-}
-
-pub fn log_append(msg: impl AsRef<str>) {
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(LOG_PATH)
-        .unwrap();
-    file.write_all(msg.as_ref().as_bytes()).unwrap();
+    log_append(log_text);
 }

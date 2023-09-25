@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::log::log;
 use crate::utils::AnyResult;
 
 const CONFIG_PATH: &str = "config.toml";
@@ -28,7 +27,7 @@ const CONFIG_COMMENT: &str = "
 # email_server：邮件服务器地址
 # email_username：邮箱
 # email_password：邮箱密码（SMTP授权码）
-# email_to_list：若为空，则发给自己
+# email_to_list：邮件发送列表，可以填自己的邮箱，可以填多个，留空则禁用邮件功能
 # email_subject：邮件主题（标题）
 # email_body：邮件内容，其中的{old_ip}会被替换为旧的ip，{new_ip}会被替换为新的ip
 ";
@@ -63,8 +62,8 @@ impl Default for Config {
             email_username: "10000@qq.com".to_string(),
             email_password: "f0123456789abcdef".to_string(),
             email_to_list: Vec::new(),
-            email_subject: "WLT IP Address Change Notification".to_string(),
-            email_body: "Old IP Address: {old_ip}\nNew IP Address: {new_ip}\n".to_string(),
+            email_subject: "WLT IP Change Notification".to_string(),
+            email_body: "Old IP: {old_ip}\nNew IP: {new_ip}\n".to_string(),
         }
     }
 }
@@ -78,14 +77,14 @@ impl Config {
     }
 
     pub fn load() -> AnyResult<Self> {
-        let config = if let Ok(config) = std::fs::read_to_string(CONFIG_PATH) {
-            toml::from_str::<Config>(&config)?
-        } else {
-            log("配置文件不存在，创建默认配置文件");
+        let path = std::path::Path::new(CONFIG_PATH);
+        if !path.exists() || path.metadata().unwrap().len() == 0 {
             let config = Config::default();
             config.save()?;
-            std::process::exit(0);
-        };
-        Ok(config)
+            Ok(config)
+        } else {
+            let config = std::fs::read_to_string(CONFIG_PATH)?;
+            toml::from_str::<Config>(&config).map_err(|e| e.into())
+        }
     }
 }

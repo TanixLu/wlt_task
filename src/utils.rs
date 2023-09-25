@@ -11,3 +11,18 @@ pub fn get_str_between<'a>(text: &'a str, left: &str, right: &str) -> AnyResult<
         .ok_or(format!("right不在text中\nright: {}\ntext: {}", right, text))?;
     Ok(&no_left[..right])
 }
+
+pub fn replace_password(
+    text: impl AsRef<str>,
+    password: impl AsRef<str>,
+    to: impl AsRef<str>,
+) -> String {
+    if !password.as_ref().is_empty() {
+        let encoded_password = urlencoding::encode(password.as_ref()).to_string();
+        text.as_ref()
+            .replace(password.as_ref(), to.as_ref())
+            .replace(&encoded_password, to.as_ref())
+    } else {
+        text.as_ref().to_owned()
+    }
+}

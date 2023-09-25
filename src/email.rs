@@ -13,18 +13,19 @@ pub fn send_email(
     subject: &str,
     body: &str,
 ) {
+    if email_to_list.is_empty() {
+        log("没有设置email_to_list，不发送邮件");
+        return;
+    }
+
     let try_send_email = || -> AnyResult<()> {
         let creds = Credentials::new(username.to_owned(), password.to_owned());
 
         let mailer = SmtpTransport::relay(server)?.credentials(creds).build();
 
         let mut email = Message::builder().from(username.parse()?);
-        if email_to_list.is_empty() {
-            email = email.to(username.parse()?);
-        } else {
-            for mailbox_string in email_to_list.iter() {
-                email = email.to(mailbox_string.parse()?);
-            }
+        for mailbox_string in email_to_list.iter() {
+            email = email.to(mailbox_string.parse()?);
         }
         let email = email
             .subject(subject.to_owned())
