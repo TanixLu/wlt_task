@@ -2,11 +2,9 @@ use std::io::Write;
 
 use chrono::Local;
 
-use crate::utils::AnyResult;
-
 const LOG_PATH: &str = "log.txt";
 
-pub fn log(msg: impl AsRef<str>) -> AnyResult<()> {
+pub fn log(msg: impl AsRef<str>) {
     let msg = format!(
         "{}: {}\n",
         Local::now().format("%Y-%m-%d %H:%M:%S"),
@@ -15,7 +13,16 @@ pub fn log(msg: impl AsRef<str>) -> AnyResult<()> {
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(LOG_PATH)?;
-    file.write_all(msg.as_bytes())?;
-    Ok(())
+        .open(LOG_PATH)
+        .unwrap();
+    file.write_all(msg.as_bytes()).unwrap();
+}
+
+pub fn log_append(msg: impl AsRef<str>) {
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(LOG_PATH)
+        .unwrap();
+    file.write_all(msg.as_ref().as_bytes()).unwrap();
 }

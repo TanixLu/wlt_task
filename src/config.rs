@@ -24,10 +24,10 @@ const CONFIG_COMMENT: &str = "
 #   39600 11小时
 #   50400 14小时
 # ip：用于记录之前的ip地址，当ip地址变动时，会自动发送邮件通知，这一项不要手动更改
-# cookie：保存Cookie，这一项不要手动更改
+# rd：Cookie中的一个字段，这一项不要手动更改
 # email_server：邮件服务器地址
 # email_username：邮箱
-# email_password：邮箱密码
+# email_password：邮箱密码（SMTP授权码）
 # email_to_list：若为空，则发给自己
 # email_subject：邮件主题（标题）
 # email_body：邮件内容，其中的{old_ip}会被替换为旧的ip，{new_ip}会被替换为新的ip
@@ -41,7 +41,7 @@ pub struct Config {
     pub type_: u8,
     pub exp: u32,
     pub ip: String,
-    pub cookie: String,
+    pub rd: String,
     pub email_server: String,
     pub email_username: String,
     pub email_password: String,
@@ -58,7 +58,7 @@ impl Default for Config {
             type_: 8,
             exp: 0,
             ip: String::new(),
-            cookie: String::new(),
+            rd: String::new(),
             email_server: "smtp.qq.com".to_string(),
             email_username: "10000@qq.com".to_string(),
             email_password: "f0123456789abcdef".to_string(),
@@ -81,7 +81,7 @@ impl Config {
         let config = if let Ok(config) = std::fs::read_to_string(CONFIG_PATH) {
             toml::from_str::<Config>(&config)?
         } else {
-            log("配置文件不存在，创建默认配置文件")?;
+            log("配置文件不存在，创建默认配置文件");
             let config = Config::default();
             config.save()?;
             config

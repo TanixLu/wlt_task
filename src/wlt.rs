@@ -1,112 +1,77 @@
+use std::time::Duration;
+
 use encoding_rs::GBK;
 use reqwest::{
     blocking::{Client, Response},
+    header::{COOKIE, SET_COOKIE},
     StatusCode,
 };
-use scraper::{Html, Selector};
 
-use crate::utils::{find_str_between, AnyResult};
+use crate::utils::{get_str_between, AnyResult};
 
 const WLT_URL: &str = "http://202.38.64.59/cgi-bin/ip";
 
-pub struct Page {
+pub struct WltPage {
     pub url: String,
     pub status: StatusCode,
     pub text: String,
 }
 
-pub enum WltPage {
-    LoginPage(Page),
-    ControlPage(Page),
-}
-
-impl Page {
-    fn check_ok(&self) -> AnyResult<()> {
-        if self.status == StatusCode::OK {
-            Ok(())
-        } else {
-            Err(format!("访问页面出错：{} {} {}", self.url, self.status, self.text).into())
-        }
-    }
+pub enum WltPageType {
+    LoginPage,
+    ControlPage,
 }
 
 impl WltPage {
     fn new(url: impl Into<String>, resp: Response) -> AnyResult<Self> {
+        let url = url.into();
         let status = resp.status();
         let text = resp.text_with_charset("GBK")?;
-        let page = Page {
-            url: url.into(),
-            status,
-            text,
-        };
-        page.check_ok()?;
-        if page.text.contains("网络通账号登录") {
-            Ok(WltPage::LoginPage(page))
-        } else if page.text.contains("访问文献资源建议使用1出口") {
-            Ok(WltPage::ControlPage(page))
-        } else {
-            Err(format!("未知页面：{} {} {}", WLT_URL, status, page.text).into())
-        }
+        Ok(Self { url, status, text })
+    }
+
+    pub fn check_ok(&self) -> bool {
+        self.status == StatusCode::OK
     }
 
     pub fn search_ip(&self) -> AnyResult<String> {
-        match self {
-            WltPage::LoginPage(page) => {
-                let html = Html::parse_document(&page.text);
-                let ip_selector = Selector::parse("body > htm > form > table > tbody > tr:nth-child(2) > td > p > table > tbody > tr:nth-child(1) > td:nth-child(2)").map_err(|e| e.to_string())?;
-                match html.select(&ip_selector).next() {
-                    Some(element) => Ok(element
-                        .text()
-                        .next()
-                        .ok_or("在登录页面没有找到ip对应元素")?
-                        .trim()
-                        .to_owned()),
-                    None => Err("在登录页面没有找到ip".into()),
-                }
-            }
-            WltPage::ControlPage(page) => {
-                let html = Html::parse_document(&page.text);
-                let ip_selector = Selector::parse(
-                    "body > htm > p:nth-child(11) > table > tbody > tr > td:nth-child(1)",
-                )
-                .map_err(|e| e.to_string())?;
-                match html.select(&ip_selector).next() {
-                    Some(element) => {
-                        let text = element
-                            .text()
-                            .next()
-                            .ok_or("在控制页面没有找到ip对应元素")?
-                            .trim()
-                            .to_owned();
-                        Ok(find_str_between(&text, "当前IP地址", "状态")?.to_owned())
-                    }
-                    None => Err("在控制页面没有找到ip".into()),
-                }
-            }
+        let ip = match self.page_type()? {
+            WltPageType::LoginPage => get_str_between(&self.text, "name=ip value=", ">"),
+            WltPageType::ControlPage => get_str_between(&self.text, "当前IP地址", "状态"),
+        }?
+        .to_owned();
+        Ok(ip)
+    }
+
+    pub fn page_type(&self) -> AnyResult<WltPageType> {
+        if self.text.contains("网络通账号登录") {
+            Ok(WltPageType::LoginPage)
+        } else if self.text.contains("访问文献资源建议使用1出口") {
+            Ok(WltPageType::ControlPage)
+        } else {
+            Err(format!("未知类型页面\nurl: {}\ntext: {}", self.url, self.text).into())
         }
     }
 }
 
 pub struct WltClient {
     client: Client,
-    cookie_store: std::sync::Arc<reqwest_cookie_store::CookieStoreMutex>,
     name: String,
     password: String,
+    rd: String,
     type_: u8,
     exp: u32,
 }
 
 impl WltClient {
-    pub fn new(name: &str, password: &str, type_: u8, exp: u32, cookie: &str) -> AnyResult<Self> {
-        let cookie_store = reqwest_cookie_store::CookieStore::load_json(cookie.as_bytes())?;
-        let cookie_store = reqwest_cookie_store::CookieStoreMutex::new(cookie_store);
-        let cookie_store = std::sync::Arc::new(cookie_store);
+    pub fn new(name: &str, password: &str, rd: &str, type_: u8, exp: u32) -> AnyResult<Self> {
         let client = reqwest::blocking::Client::builder()
-            .cookie_provider(cookie_store.clone())
+            .timeout(Duration::from_secs(1))
+            .no_proxy()
             .build()?;
         Ok(Self {
             client,
-            cookie_store,
+            rd: rd.to_owned(),
             name: name.to_owned(),
             password: password.to_owned(),
             type_,
@@ -114,62 +79,98 @@ impl WltClient {
         })
     }
 
-    pub fn get_cookie_string(&self) -> AnyResult<String> {
-        let mut buf = Vec::new();
-        self.cookie_store
-            .lock()
-            .map_err(|e| e.to_string())?
-            .save_json(&mut buf)?;
-        Ok(String::from_utf8(buf)?)
+    pub fn get_cookie(&self) -> String {
+        let password = urlencoding::encode(&self.password);
+        let cookie = format!("name={}; password={}; rd={}", self.name, password, self.rd);
+        cookie
     }
 
-    pub fn access_page(&self) -> AnyResult<WltPage> {
-        let resp = self.client.get(WLT_URL).send()?;
-        WltPage::new(WLT_URL, resp)
+    pub fn get_rd(&self) -> &str {
+        &self.rd
     }
 
-    pub fn login(&self, ip: &str) -> AnyResult<WltPage> {
+    fn update_rd(&mut self, resp: &Response) -> AnyResult<()> {
+        if let Some(set_cookie) = resp.headers().get(SET_COOKIE) {
+            let set_cookie = set_cookie.to_str()?;
+            if let Some(rd) = set_cookie.strip_prefix("rd=") {
+                self.rd = rd.to_owned();
+            }
+        }
+        Ok(())
+    }
+
+    pub fn access_page(&mut self) -> AnyResult<WltPage> {
+        let resp = self
+            .client
+            .get(WLT_URL)
+            .header(COOKIE, self.get_cookie())
+            .send()?;
+        self.update_rd(&resp)?;
+        let wlt_page = WltPage::new(WLT_URL, resp)?;
+        if wlt_page.check_ok() {
+            Ok(wlt_page)
+        } else {
+            Err(format!(
+                "访问网络通页面失败\nurl: {}\nstatus: {}\ntext: {}",
+                WLT_URL, wlt_page.status, wlt_page.text
+            )
+            .into())
+        }
+    }
+
+    pub fn login(&mut self, ip: &str) -> AnyResult<WltPage> {
+        let name = self.name.to_owned();
+        let password =self.name.to_owned();
         let go = GBK.encode("登录账户").0;
         let go = &urlencoding::encode_binary(&go);
         let login_form = [
             ("cmd", "login"),
             ("url", "URL"),
             ("ip", ip),
-            ("name", &self.name),
-            ("password", &self.password),
+            ("name", &name),
+            ("password", &password),
             ("savepass", "on"),
             ("go", go),
         ];
-        let resp = self.client.post(WLT_URL).form(&login_form).send()?;
-        if resp.status() == StatusCode::OK {
-            WltPage::new(WLT_URL, resp)
+        let resp = self
+            .client
+            .post(WLT_URL)
+            .form(&login_form)
+            .header(COOKIE, self.get_cookie())
+            .send()?;
+        self.update_rd(&resp)?;
+        let wlt_page = WltPage::new(WLT_URL, resp)?;
+        if wlt_page.status == StatusCode::OK {
+            Ok(wlt_page)
         } else {
             Err(format!(
-                "登录账户失败：{} {} {}",
-                WLT_URL,
-                resp.status(),
-                resp.text_with_charset("GBK")?
+                "登录账户失败\nurl: {}\nform: {:?}\nstatus: {}\ntext: {}",
+                WLT_URL, login_form, wlt_page.status, wlt_page.text
             )
             .into())
         }
     }
 
-    pub fn set_wlt(&self) -> AnyResult<WltPage> {
+    pub fn set_wlt(&mut self) -> AnyResult<WltPage> {
         let go = GBK.encode("开通网络").0;
         let go = &urlencoding::encode_binary(&go);
         let url = format!(
             "{}?cmd=set&url=URL&type={}&exp={}&go=+{}+",
             WLT_URL, self.type_, self.exp, go,
         );
-        let resp = self.client.get(&url).send()?;
-        if resp.status() == StatusCode::OK {
-            WltPage::new(url, resp)
+        let resp = self
+            .client
+            .get(&url)
+            .header(COOKIE, self.get_cookie())
+            .send()?;
+        self.update_rd(&resp)?;
+        let wlt_page = WltPage::new(&url, resp)?;
+        if wlt_page.status == StatusCode::OK {
+            Ok(wlt_page)
         } else {
             Err(format!(
-                "开通网络失败：{} {} {}",
-                url,
-                resp.status(),
-                resp.text_with_charset("GBK")?
+                "开通网络失败\nurl: {}\nstatus: {}\ntext: {}",
+                url, wlt_page.status, wlt_page.text
             )
             .into())
         }
