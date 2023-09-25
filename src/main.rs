@@ -16,7 +16,7 @@ fn main() -> AnyResult<()> {
         let mut wlt_client = WltClient::new(
             &config.name,
             &config.password,
-            &config.rd,
+            &config.rn,
             config.type_,
             config.exp,
         )?;
@@ -27,18 +27,7 @@ fn main() -> AnyResult<()> {
             WltPageType::LoginPage => {
                 wlt_client.login(&new_ip)?;
                 let set_wlt_page = wlt_client.set_wlt()?;
-                match set_wlt_page.page_type()? {
-                    WltPageType::LoginPage => {
-                        return Err(format!(
-                            "开通网络失败\nurl: {}\ncookie: {}\ntext: {}",
-                            set_wlt_page.url,
-                            wlt_client.get_cookie(),
-                            set_wlt_page.text
-                        )
-                        .into())
-                    }
-                    WltPageType::ControlPage => set_wlt_page.search_ip()?,
-                }
+                set_wlt_page.search_ip()?
             }
             WltPageType::ControlPage => new_ip,
         };
@@ -64,13 +53,13 @@ fn main() -> AnyResult<()> {
             log_append(".");
         }
 
-        if wlt_client.get_rd() != &config.rd {
+        if wlt_client.get_rn() != &config.rn {
             log(&format!(
-                "rd变更\nold_rd: {}\nnew_rd: {}",
-                config.rd,
-                wlt_client.get_rd()
+                "old_rn: {} new_rn: {}",
+                config.rn,
+                wlt_client.get_rn()
             ));
-            config.rd = wlt_client.get_rd().to_owned();
+            config.rn = wlt_client.get_rn().to_owned();
             config.save()?;
         }
 
@@ -81,6 +70,9 @@ fn main() -> AnyResult<()> {
         let e = e.to_string();
         log(&e);
         let config = Config::load()?;
+        let e = e.replace(&config.password, "***");
+        let encoded_password = urlencoding::encode(&config.password).to_string();
+        let e = e.replace(&encoded_password, "***");
         send_email(
             &config.email_server,
             &config.email_username,

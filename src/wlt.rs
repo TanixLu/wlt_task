@@ -58,20 +58,20 @@ pub struct WltClient {
     client: Client,
     name: String,
     password: String,
-    rd: String,
+    rn: String,
     type_: u8,
     exp: u32,
 }
 
 impl WltClient {
-    pub fn new(name: &str, password: &str, rd: &str, type_: u8, exp: u32) -> AnyResult<Self> {
+    pub fn new(name: &str, password: &str, rn: &str, type_: u8, exp: u32) -> AnyResult<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(1))
             .no_proxy()
             .build()?;
         Ok(Self {
             client,
-            rd: rd.to_owned(),
+            rn: rn.to_owned(),
             name: name.to_owned(),
             password: password.to_owned(),
             type_,
@@ -81,19 +81,23 @@ impl WltClient {
 
     pub fn get_cookie(&self) -> String {
         let password = urlencoding::encode(&self.password);
-        let cookie = format!("name={}; password={}; rd={}", self.name, password, self.rd);
+        let mut cookie = format!("name={}; password={}", self.name, password);
+        if !self.rn.is_empty() {
+            cookie.push_str("; rn=");
+            cookie.push_str(&self.rn);
+        }
         cookie
     }
 
-    pub fn get_rd(&self) -> &str {
-        &self.rd
+    pub fn get_rn(&self) -> &str {
+        &self.rn
     }
 
-    fn update_rd(&mut self, resp: &Response) -> AnyResult<()> {
+    fn update_rn(&mut self, resp: &Response) -> AnyResult<()> {
         if let Some(set_cookie) = resp.headers().get(SET_COOKIE) {
             let set_cookie = set_cookie.to_str()?;
-            if let Some(rd) = set_cookie.strip_prefix("rd=") {
-                self.rd = rd.to_owned();
+            if let Some(rn) = set_cookie.strip_prefix("rn=") {
+                self.rn = rn.to_owned();
             }
         }
         Ok(())
@@ -105,7 +109,6 @@ impl WltClient {
             .get(WLT_URL)
             .header(COOKIE, self.get_cookie())
             .send()?;
-        self.update_rd(&resp)?;
         let wlt_page = WltPage::new(WLT_URL, resp)?;
         if wlt_page.check_ok() {
             Ok(wlt_page)
@@ -120,7 +123,7 @@ impl WltClient {
 
     pub fn login(&mut self, ip: &str) -> AnyResult<WltPage> {
         let name = self.name.to_owned();
-        let password =self.name.to_owned();
+        let password = self.password.to_owned();
         let go = GBK.encode("登录账户").0;
         let go = &urlencoding::encode_binary(&go);
         let login_form = [
@@ -138,16 +141,18 @@ impl WltClient {
             .form(&login_form)
             .header(COOKIE, self.get_cookie())
             .send()?;
-        self.update_rd(&resp)?;
+        self.update_rn(&resp)?;
         let wlt_page = WltPage::new(WLT_URL, resp)?;
-        if wlt_page.status == StatusCode::OK {
-            Ok(wlt_page)
-        } else {
+        if wlt_page.text.contains("用户名或密码错误") {
+            Err("用户名或密码错误".into())
+        } else if wlt_page.status != StatusCode::OK {
             Err(format!(
                 "登录账户失败\nurl: {}\nform: {:?}\nstatus: {}\ntext: {}",
                 WLT_URL, login_form, wlt_page.status, wlt_page.text
             )
             .into())
+        } else {
+            Ok(wlt_page)
         }
     }
 
@@ -163,14 +168,16 @@ impl WltClient {
             .get(&url)
             .header(COOKIE, self.get_cookie())
             .send()?;
-        self.update_rd(&resp)?;
         let wlt_page = WltPage::new(&url, resp)?;
-        if wlt_page.status == StatusCode::OK {
+        if wlt_page.text.contains("信息：网络设置成功") {
             Ok(wlt_page)
         } else {
             Err(format!(
-                "开通网络失败\nurl: {}\nstatus: {}\ntext: {}",
-                url, wlt_page.status, wlt_page.text
+                "开通网络失败\nurl: {}\ncookies: {}\nstatus: {}\ntext: {}",
+                url,
+                self.get_cookie(),
+                wlt_page.status,
+                wlt_page.text
             )
             .into())
         }
