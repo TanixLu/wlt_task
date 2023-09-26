@@ -9,7 +9,7 @@ use config::Config;
 use email::send_email;
 use log::{log, log_append};
 use task::{query_task, set_task, unset_task};
-use utils::{replace_password, AnyResult};
+use utils::{get_str_between, replace_password, AnyResult};
 use wlt::{WltClient, WltPageType};
 
 fn check_wlt() -> AnyResult<()> {
@@ -22,8 +22,17 @@ fn check_wlt() -> AnyResult<()> {
         config.exp,
     )?;
     let wlt_page = wlt_client.access_page()?;
-    let new_ip = wlt_page.search_ip()?;
-    let new_ip = match wlt_page.page_type()? {
+    let mut new_ip = wlt_page.search_ip()?;
+    let need_set = match wlt_page.page_type()? {
+        WltPageType::ControlPage => {
+            let type_text = get_str_between(&wlt_page.text, "出口: ", "网出口")?;
+            let type_ = type_text.as_bytes()[0] - b'1';
+            if type_ == config.type_ {
+                false
+            } else {
+                true
+            }
+        }
         WltPageType::LoginPage => {
             wlt_client.login(&new_ip)?;
             if wlt_client.get_rn() != config.rn {
@@ -35,11 +44,13 @@ fn check_wlt() -> AnyResult<()> {
                 config.rn = wlt_client.get_rn().to_owned();
                 config.save()?;
             }
-            let set_wlt_page = wlt_client.set_wlt()?;
-            set_wlt_page.search_ip()?
+            true
         }
-        WltPageType::ControlPage => new_ip,
     };
+    if need_set {
+        let set_wlt_page = wlt_client.set_wlt()?;
+        new_ip = set_wlt_page.search_ip()?
+    }
     let old_ip = config.ip.clone();
     if new_ip != old_ip {
         config.ip = new_ip.clone();

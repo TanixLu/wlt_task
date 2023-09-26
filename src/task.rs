@@ -84,8 +84,3 @@ pub fn query_task() -> AnyResult<String> {
         .output()?;
     output_string(output)
 }
-
-#[test]
-fn t() {
-    dbg!(std::env::var("WINDIR").unwrap());
-}
