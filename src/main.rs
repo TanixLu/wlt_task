@@ -28,7 +28,7 @@ fn check_wlt() -> AnyResult<()> {
             wlt_client.login(&new_ip)?;
             if wlt_client.get_rn() != &config.rn {
                 log(&format!(
-                    "old_rn: {}, new_rn: {}",
+                    "old_rn: {} new_rn: {}",
                     config.rn,
                     wlt_client.get_rn()
                 ));
@@ -48,7 +48,7 @@ fn check_wlt() -> AnyResult<()> {
             .email_body
             .replace("{old_ip}", &old_ip)
             .replace("{new_ip}", &new_ip);
-        log(&format!("old_ip: {}, new_ip: {}", old_ip, new_ip));
+        log(&format!("old_ip: {} new_ip: {}", old_ip, new_ip));
         send_email(
             &config.email_server,
             &config.email_username,
