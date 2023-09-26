@@ -3,13 +3,17 @@
 ## 命令及作用
 
 ```
+Windows、Linux、macOS都支持的命令：
 wlt_task             登录WLT并在IP变化时发送邮件
+仅Windows支持的命令：
 wlt_task set         将wlt_task设置为每5分钟运行一次的计划任务
 wlt_task unset       取消计划任务
 wlt_task query       查询计划任务的状态
 ```
 
 ## 使用说明
+
+### Windows
 
 将`wlt_task.exe`放在一个固定的文件夹里，其产生的文件都会在这个文件夹。
 
@@ -36,13 +40,15 @@ wlt_task query       查询计划任务的状态
 
 ## 卸载说明
 
+### Windows
+
 在`wlt_task.exe`文件夹打开`cmd`，输入`wlt_task unset`并回车运行，若没有报错，则说明取消计划任务成功。
 
 之后删除同一文件夹下的`wlt_task.exe`、`config.toml`、`log.txt`、`wlt_task.vbs`文件，这样就删除了所有`wlt_task`组件。
 
 ## TODO
 
-- `set`, `unset`, `query`命令支持Linux操作系统
+- `set`, `unset`, `query`命令支持Linux/macOS
 - windows系统上，将命令行指令改为弹出窗口并给出选项来选择，方便用户使用；增加卸载命令
 
 *star + issue = 火速更新*
