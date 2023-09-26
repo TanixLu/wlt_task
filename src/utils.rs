@@ -53,7 +53,7 @@ fn default_nonce() -> Nonce {
 pub fn str_encode(plaintext: impl AsRef<str>, key: impl AsRef<str>) -> AnyResult<String> {
     cipher_new(str_to_256bits(key))?
         .encrypt(&default_nonce(), plaintext.as_ref().as_bytes())
-        .map(|b| hex::encode(b))
+        .map(hex::encode)
         .map_err(|e| e.to_string().into())
 }
 

@@ -5,6 +5,7 @@ use chrono::Local;
 const LOG_PATH: &str = "log.txt";
 
 pub fn log_append(msg: impl AsRef<str>) {
+    println!("{}", msg.as_ref());
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)

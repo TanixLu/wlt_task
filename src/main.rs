@@ -26,8 +26,8 @@ fn check_wlt() -> AnyResult<()> {
     let new_ip = match wlt_page.page_type()? {
         WltPageType::LoginPage => {
             wlt_client.login(&new_ip)?;
-            if wlt_client.get_rn() != &config.rn {
-                log(&format!(
+            if wlt_client.get_rn() != config.rn {
+                log(format!(
                     "old_rn: {} new_rn: {}",
                     config.rn,
                     wlt_client.get_rn()
@@ -48,7 +48,7 @@ fn check_wlt() -> AnyResult<()> {
             .email_body
             .replace("{old_ip}", &old_ip)
             .replace("{new_ip}", &new_ip);
-        log(&format!("old_ip: {} new_ip: {}", old_ip, new_ip));
+        log(format!("old_ip: {} new_ip: {}", old_ip, new_ip));
         send_email(
             &config.email_server,
             &config.email_username,
@@ -63,27 +63,14 @@ fn check_wlt() -> AnyResult<()> {
 }
 
 const USAGE: &str = "usage:
-wlt_task: login wlt and if ip changes, send an email
-wlt_task set: set wlt_task as a scheduled task, which runs every 5 minutes
-wlt_task unset: unset the scheduled task
-wlt_task query: query status of the scheduled task";
+    wlt_task             Log in to WLT and send an email if the IP changes.
+    wlt_task set         Set wlt_task as a scheduled task to run every 5 minutes.
+    wlt_task unset       Unset the scheduled task.
+    wlt_task query       Query the status of the scheduled task.";
 
 fn main() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() == 2 {
-        match args[1].as_str() {
-            subcommand @ ("set" | "unset" | "query") => {
-                let output = match subcommand {
-                    "set" => set_task(),
-                    "unset" => unset_task(),
-                    "query" => query_task(),
-                    _ => unreachable!(),
-                }?;
-                println!("{}", output);
-            }
-            _ => println!("{}", USAGE),
-        }
-    } else {
+    if args.len() == 1 {
         if let Err(e) = check_wlt() {
             let mut e = e.to_string();
             if let Ok(config) = Config::load() {
@@ -101,6 +88,16 @@ fn main() -> AnyResult<()> {
                 log(&e);
             }
         }
+    } else if args.len() == 2 && (args[1] == "set" || args[1] == "unset" || args[1] == "query") {
+        let output = match args[1].as_str() {
+            "set" => set_task(),
+            "unset" => unset_task(),
+            "query" => query_task(),
+            _ => unreachable!(),
+        }?;
+        println!("{}", output);
+    } else {
+        println!("{}", USAGE);
     }
 
     Ok(())
