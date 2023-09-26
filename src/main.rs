@@ -21,15 +21,18 @@ fn check_wlt() -> AnyResult<()> {
         config.type_,
         config.exp,
     )?;
+
     let wlt_page = wlt_client.access_page()?;
     let mut new_ip = wlt_page.search_ip()?;
-    let need_set = match wlt_page.page_type()? {
+
+    let need_set_wlt = match wlt_page.page_type()? {
         WltPageType::ControlPage => {
             let type_text = get_str_between(&wlt_page.text, "出口: ", "网出口")?;
             let type_ = type_text.as_bytes()[0] - b'1';
             if type_ == config.type_ {
                 false
             } else {
+                log(format!("old_type: {} new_type: {}", type_, config.type_));
                 true
             }
         }
@@ -47,10 +50,12 @@ fn check_wlt() -> AnyResult<()> {
             true
         }
     };
-    if need_set {
+
+    if need_set_wlt {
         let set_wlt_page = wlt_client.set_wlt()?;
         new_ip = set_wlt_page.search_ip()?
     }
+
     let old_ip = config.ip.clone();
     if new_ip != old_ip {
         config.ip = new_ip.clone();
@@ -69,6 +74,7 @@ fn check_wlt() -> AnyResult<()> {
             &body,
         );
     }
+
     log_append(".");
     Ok(())
 }
