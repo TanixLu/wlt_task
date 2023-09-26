@@ -5,7 +5,11 @@ use chrono::Local;
 const LOG_PATH: &str = "log.txt";
 
 pub fn log_append(msg: impl AsRef<str>) {
-    println!("{}", msg.as_ref());
+    if msg.as_ref().starts_with("\n") {
+        print!("{}", &msg.as_ref()[1..]);
+    } else {
+        print!("{}", msg.as_ref());
+    }
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -14,7 +18,7 @@ pub fn log_append(msg: impl AsRef<str>) {
     file.write_all(msg.as_ref().as_bytes()).unwrap();
 }
 
-fn need_new_line() -> bool {
+fn log_need_new_line() -> bool {
     if !std::path::Path::new(LOG_PATH).exists() {
         return false;
     }
@@ -33,7 +37,7 @@ fn need_new_line() -> bool {
 
 pub fn log(msg: impl AsRef<str>) {
     let mut log_text = String::new();
-    if need_new_line() {
+    if log_need_new_line() {
         log_text.push('\n');
     }
 
