@@ -5,7 +5,7 @@ use crate::utils::{get_machine_uid, str_decode, str_encode, AnyResult};
 const CONFIG_PATH: &str = "config.toml";
 const CONFIG_COMMENT: &str = r#"
 # name：网络通用户名
-# password：网络通密码
+# password：网络通（加密）密码
 # type：出口选择
 #   0 教育网出口(国际,仅用教育网访问,适合看文献)
 #   1 电信网出口(国际,到教育网走教育网)
