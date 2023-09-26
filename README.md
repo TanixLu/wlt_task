@@ -11,7 +11,7 @@ wlt_task query       查询计划任务的状态
 
 ## 使用说明
 
-将`wlt_task.exe`放在一个固定的文件夹里，其产生的文件都会在当前文件夹。
+将`wlt_task.exe`放在一个固定的文件夹里，其产生的文件都会在这个文件夹。
 
 先点击运行一次`wlt_task.exe`，会产生`config.toml`和`log.txt`两个文件。
 
