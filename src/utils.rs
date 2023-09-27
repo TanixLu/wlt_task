@@ -3,11 +3,11 @@ use blake2::{Blake2s256, Digest};
 
 pub type AnyResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub fn get_str_between<'a>(
-    text: &'a str,
+pub fn get_str_between(
+    text: &str,
     left: impl AsRef<str>,
     right: impl AsRef<str>,
-) -> AnyResult<&'a str> {
+) -> AnyResult<&str> {
     let left = left.as_ref();
     let right = right.as_ref();
     let left = text

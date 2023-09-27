@@ -32,55 +32,49 @@ pub fn set_task() -> AnyResult<String> {
     let wscript_path = PathBuf::new()
         .join(std::env::var("WINDIR")?)
         .join("System32")
-        .join("wscript.exe");
-    let current_dir = std::env::current_dir()?;
-    let vbs_path = current_dir.join(VBS_NAME);
-    let action = format!(
-        "(New-ScheduledTaskAction -Execute {} -WorkingDirectory {} -Argument {})",
-        wscript_path.to_string_lossy(),
-        current_dir.to_string_lossy(),
-        vbs_path.to_string_lossy()
+        .join("wscript.exe")
+        .to_string_lossy()
+        .to_string();
+    let current_dir = std::env::current_dir()?.to_string_lossy().to_string();
+    let vbs_path = std::env::current_dir()?
+        .join(VBS_NAME)
+        .to_string_lossy()
+        .to_string();
+    let command = format!(
+        r#"$action = New-ScheduledTaskAction -Execute {wscript_path} -WorkingDirectory {current_dir} -Argument {vbs_path}
+$description = "Configure WLT and send notification emails when the IP changes"
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -StartWhenAvailable -DontStopIfGoingOnBatteries -RunOnlyIfNetworkAvailable
+
+$triggers = @()
+$triggers += New-ScheduledTaskTrigger -Once -At "2000-01-01 00:00:00" -RepetitionInterval (New-TimeSpan -Minutes 5)
+
+$CIMTriggerClass = Get-CimClass -ClassName MSFT_TaskEventTrigger -Namespace Root/Microsoft/Windows/TaskScheduler:MSFT_TaskEventTrigger
+$trigger = New-CimInstance -CimClass $CIMTriggerClass -ClientOnly
+$trigger.Subscription = '<QueryList><Query Id="0" Path="Microsoft-Windows-NetworkProfile/Operational"><Select Path="Microsoft-Windows-NetworkProfile/Operational">*[System[(EventID=10000)]]</Select></Query></QueryList>'
+$trigger.Enabled = $True
+$triggers += $trigger
+
+Register-ScheduledTask -Force -TaskName {TASK_NAME} -Action $action -Description $description -Settings $settings -Trigger $triggers"#
     );
-    const DESCRIPTION: &str = r#""Configure WLT and send notification emails when the IP changes""#;
-    const SETTINGS: &str = "(New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -StartWhenAvailable -DontStopIfGoingOnBatteries -RunOnlyIfNetworkAvailable)";
-    const TRIGGER: &str = r#"(New-ScheduledTaskTrigger -Once -At "2000-01-01 00:00:00" -RepetitionInterval (New-TimeSpan -Minutes 5))"#;
-    let output = Command::new("powershell")
-        .arg("Register-ScheduledTask")
-        .arg("-Force")
-        .arg("-TaskName")
-        .arg(TASK_NAME)
-        .arg("-Action")
-        .arg(action)
-        .arg("-Description")
-        .arg(DESCRIPTION)
-        .arg("-Settings")
-        .arg(SETTINGS)
-        .arg("-Trigger")
-        .arg(TRIGGER)
-        .output()?;
+
+    let output = Command::new("powershell").arg(command).output()?;
     output_string(output)
 }
 
 pub fn unset_task() -> AnyResult<String> {
     let output = Command::new("powershell")
-        .arg("Unregister-ScheduledTask")
-        .arg("-TaskName")
-        .arg(TASK_NAME)
-        .arg("-TaskPath")
-        .arg("\\")
-        .arg("-Confirm:$false")
+        .arg(format!(
+            "Unregister-ScheduledTask -TaskName {TASK_NAME} -TaskPath \\ -Confirm:$false"
+        ))
         .output()?;
     output_string(output)
 }
 
 pub fn query_task() -> AnyResult<String> {
     let output = Command::new("powershell")
-        .arg("Get-ScheduledTaskInfo")
-        .arg("-TaskName")
-        .arg(TASK_NAME)
-        .arg("-TaskPath")
-        .arg("\\")
-        .arg("-Verbose")
+        .arg(format!(
+            "Get-ScheduledTaskInfo -TaskName {TASK_NAME} -TaskPath \\ -Verbose"
+        ))
         .output()?;
     output_string(output)
 }

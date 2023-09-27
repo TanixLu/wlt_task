@@ -5,7 +5,7 @@ use chrono::Local;
 const LOG_PATH: &str = "log.txt";
 
 pub fn log_append(msg: impl AsRef<str>) {
-    if msg.as_ref().starts_with("\n") {
+    if msg.as_ref().starts_with('\n') {
         print!("{}", &msg.as_ref()[1..]);
     } else {
         print!("{}", msg.as_ref());

@@ -6,7 +6,7 @@
 Windows、Linux、macOS都支持的命令：
 wlt_task             登录WLT并在IP变化时发送邮件
 仅Windows支持的命令：
-wlt_task set         将wlt_task设置为每5分钟运行一次的计划任务
+wlt_task set         将wlt_task设置为每5分钟+网络连接时运行的计划任务
 wlt_task unset       取消计划任务
 wlt_task query       查询计划任务的状态
 ```
