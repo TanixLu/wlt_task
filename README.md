@@ -21,9 +21,9 @@ wlt_task query       查询计划任务的状态
 
 根据`config.toml`中的提示填写该文件，注意邮箱密码一般都是SMTP授权码。
 
-在地址栏中输入`cmd`后回车，打开命令行，输入`wlt_task set`并回车运行，其会生成一个`wlt_task.vbs`文件，若未报错，则设置计划任务成功。
+在地址栏中输入`cmd`后回车，打开命令行，输入`.\wlt_task set`并回车运行，其会生成一个`wlt_task.vbs`文件，若未报错，则设置计划任务成功。
 
-可以通过`wlt_task query`查看计划任务相关信息。
+可以通过`.\wlt_task query`查看计划任务相关信息。
 
 ## 日志说明
 
@@ -42,7 +42,7 @@ wlt_task query       查询计划任务的状态
 
 ### Windows
 
-在`wlt_task.exe`文件夹打开`cmd`，输入`wlt_task unset`并回车运行，若没有报错，则说明取消计划任务成功。
+在`wlt_task.exe`文件夹打开`cmd`，输入`.\wlt_task unset`并回车运行，若没有报错，则说明取消计划任务成功。
 
 之后删除同一文件夹下的`wlt_task.exe`、`config.toml`、`log.txt`、`wlt_task.vbs`文件，这样就删除了所有`wlt_task`组件。
 
