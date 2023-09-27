@@ -51,6 +51,7 @@ $triggers += New-ScheduledTaskTrigger -Once -At "2000-01-01 00:00:00" -Repetitio
 $CIMTriggerClass = Get-CimClass -ClassName MSFT_TaskEventTrigger -Namespace Root/Microsoft/Windows/TaskScheduler:MSFT_TaskEventTrigger
 $trigger = New-CimInstance -CimClass $CIMTriggerClass -ClientOnly
 $trigger.Subscription = '<QueryList><Query Id="0" Path="Microsoft-Windows-NetworkProfile/Operational"><Select Path="Microsoft-Windows-NetworkProfile/Operational">*[System[(EventID=10000)]]</Select></Query></QueryList>'
+$trigger.Delay = "PT5S"
 $trigger.Enabled = $True
 $triggers += $trigger
 
