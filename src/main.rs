@@ -58,13 +58,11 @@ fn check_wlt() -> AnyResult<()> {
 
     let old_ip = config.ip.clone();
     if new_ip != old_ip {
-        config.ip = new_ip.clone();
-        config.save()?;
+        log(format!("old_ip: {} new_ip: {}", old_ip, new_ip));
         let body = config
             .email_body
             .replace("{old_ip}", &old_ip)
             .replace("{new_ip}", &new_ip);
-        log(format!("old_ip: {} new_ip: {}", old_ip, new_ip));
         send_email(
             &config.email_server,
             &config.email_username,
@@ -73,6 +71,8 @@ fn check_wlt() -> AnyResult<()> {
             &config.email_subject,
             &body,
         );
+        config.ip = new_ip;
+        config.save()?;
     }
 
     log_append(".");
