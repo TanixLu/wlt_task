@@ -3,18 +3,18 @@ use std::{
     process::{Command, Output},
 };
 
-use crate::utils::AnyResult;
+
 
 const TASK_NAME: &str = "wlt_task";
 const VBS_NAME: &str = "wlt_task.vbs";
 
-fn output_string(mut output: Output) -> AnyResult<String> {
+fn output_string(mut output: Output) -> anyhow::Result<String> {
     let mut buf = output.stdout;
     buf.append(&mut output.stderr);
     Ok(String::from_utf8(buf)?)
 }
 
-fn make_task_vbs_file() -> AnyResult<()> {
+fn make_task_vbs_file() -> anyhow::Result<()> {
     let current_exe = std::env::current_exe()?;
     let contents = format!(
         r#"Set wShell = CreateObject("WScript.Shell")
@@ -27,7 +27,7 @@ wShell.Run "cmd /c {}", 0
     Ok(())
 }
 
-pub fn set_task() -> AnyResult<String> {
+pub fn set_task() -> anyhow::Result<String> {
     make_task_vbs_file()?;
     let wscript_path = PathBuf::new()
         .join(std::env::var("WINDIR")?)
@@ -62,7 +62,7 @@ Register-ScheduledTask -Force -TaskName {TASK_NAME} -Action $action -Description
     output_string(output)
 }
 
-pub fn unset_task() -> AnyResult<String> {
+pub fn unset_task() -> anyhow::Result<String> {
     let output = Command::new("powershell")
         .arg(format!(
             "Unregister-ScheduledTask -TaskName {TASK_NAME} -TaskPath \\ -Confirm:$false"
@@ -71,7 +71,7 @@ pub fn unset_task() -> AnyResult<String> {
     output_string(output)
 }
 
-pub fn query_task() -> AnyResult<String> {
+pub fn query_task() -> anyhow::Result<String> {
     let output = Command::new("powershell")
         .arg(format!(
             "Get-ScheduledTaskInfo -TaskName {TASK_NAME} -TaskPath \\ -Verbose"

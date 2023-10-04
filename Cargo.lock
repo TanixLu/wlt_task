@@ -78,6 +78,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.75"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1782,6 +1788,7 @@ name = "wlt_task"
 version = "0.1.0"
 dependencies = [
  "aes-gcm-siv",
+ "anyhow",
  "blake2",
  "chrono",
  "encoding_rs",

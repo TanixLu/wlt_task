@@ -11,10 +11,10 @@ use data::Data;
 use email::send_email;
 use log::{log, log_append};
 use task::{query_task, set_task, unset_task};
-use utils::{get_str_between, replace_password, AnyResult};
+use utils::{get_str_between, replace_password};
 use wlt::{WltClient, WltPageType};
 
-fn check_wlt() -> AnyResult<()> {
+fn check_wlt() -> anyhow::Result<()> {
     let config = Config::load()?;
     let mut data = Data::load()?;
 
@@ -89,7 +89,7 @@ const USAGE: &str = "usage:
     wlt_task unset       Unset the scheduled task.
     wlt_task query       Query the status of the scheduled task.";
 
-fn main() -> AnyResult<()> {
+fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 1 {
         if let Err(e) = check_wlt() {

@@ -1,23 +1,22 @@
 use aes_gcm_siv::{aead::Aead, Aes256GcmSiv, Nonce};
+use anyhow::Context;
 use blake2::{Blake2s256, Digest};
-
-pub type AnyResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 pub fn get_str_between(
     text: &str,
     left: impl AsRef<str>,
     right: impl AsRef<str>,
-) -> AnyResult<&str> {
+) -> anyhow::Result<&str> {
     let left = left.as_ref();
     let right = right.as_ref();
     let left = text
         .find(left)
-        .ok_or(format!("left不在text中\nleft: {}\ntext: {}", left, text))?
+        .context(format!("left不在text中\nleft: {}\ntext: {}", left, text))?
         + left.len();
     let no_left = &text[left..];
     let right = no_left
         .find(right)
-        .ok_or(format!("right不在text中\nright: {}\ntext: {}", right, text))?;
+        .context(format!("right不在text中\nright: {}\ntext: {}", right, text))?;
     Ok(&no_left[..right])
 }
 
@@ -36,8 +35,8 @@ pub fn replace_password(
     }
 }
 
-fn get_machine_uid() -> AnyResult<String> {
-    machine_uid::get().map_err(|e| e.to_string().into())
+fn get_machine_uid() -> anyhow::Result<String> {
+    machine_uid::get().map_err(|e| anyhow::Error::msg(e.to_string()))
 }
 
 fn str_to_256bits(s: impl AsRef<str>) -> [u8; 32] {
@@ -46,7 +45,7 @@ fn str_to_256bits(s: impl AsRef<str>) -> [u8; 32] {
     hasher.finalize().into()
 }
 
-fn cipher_new(key: impl AsRef<[u8]>) -> AnyResult<Aes256GcmSiv> {
+fn cipher_new(key: impl AsRef<[u8]>) -> anyhow::Result<Aes256GcmSiv> {
     use aes_gcm_siv::aead::KeyInit;
     Aes256GcmSiv::new_from_slice(key.as_ref()).map_err(|e| e.into())
 }
@@ -56,25 +55,25 @@ fn default_nonce() -> Nonce {
 }
 
 /// "plain_text" --"key"--> "646839e2fc6b3c89019e92599c8da37475b295045ced51996f62"
-fn str_encrypt(plaintext: impl AsRef<str>) -> AnyResult<String> {
+fn str_encrypt(plaintext: impl AsRef<str>) -> anyhow::Result<String> {
     cipher_new(str_to_256bits(get_machine_uid()?))?
         .encrypt(&default_nonce(), plaintext.as_ref().as_bytes())
         .map(hex::encode)
-        .map_err(|e| e.to_string().into())
+        .map_err(|e| anyhow::Error::msg(e.to_string()))
 }
 
 /// "646839e2fc6b3c89019e92599c8da37475b295045ced51996f62" --"key"--> "plain_text"
-pub fn str_decrypt(ciphertext: impl AsRef<str>) -> AnyResult<String> {
+pub fn str_decrypt(ciphertext: impl AsRef<str>) -> anyhow::Result<String> {
     cipher_new(str_to_256bits(get_machine_uid()?))?
         .decrypt(
             &default_nonce(),
             hex::decode(ciphertext.as_ref())?.as_slice(),
         )
         .map(|b| String::from_utf8_lossy(b.as_slice()).to_string())
-        .map_err(|e| e.to_string().into())
+        .map_err(|e| anyhow::Error::msg(e.to_string()))
 }
 
-pub fn substr_encrypt(text: impl AsRef<str>, substr: impl AsRef<str>) -> AnyResult<String> {
+pub fn substr_encrypt(text: impl AsRef<str>, substr: impl AsRef<str>) -> anyhow::Result<String> {
     if !substr.as_ref().is_empty() && str_decrypt(substr.as_ref()).is_err() {
         Ok(text
             .as_ref()

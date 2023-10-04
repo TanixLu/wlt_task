@@ -3,7 +3,7 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 
 use crate::log::log;
-use crate::utils::AnyResult;
+
 
 pub fn send_email(
     server: &str,
@@ -18,7 +18,7 @@ pub fn send_email(
         return;
     }
 
-    let try_send_email = || -> AnyResult<()> {
+    let try_send_email = || -> anyhow::Result<()> {
         let creds = Credentials::new(username.to_owned(), password.to_owned());
 
         let mailer = SmtpTransport::relay(server)?.credentials(creds).build();

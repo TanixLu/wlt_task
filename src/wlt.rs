@@ -7,7 +7,7 @@ use reqwest::{
     StatusCode,
 };
 
-use crate::utils::{get_str_between, AnyResult};
+use crate::utils::get_str_between;
 
 const WLT_URL: &str = "http://202.38.64.59/cgi-bin/ip";
 
@@ -23,7 +23,7 @@ pub enum WltPageType {
 }
 
 impl WltPage {
-    fn new(url: impl Into<String>, resp: Response) -> AnyResult<Self> {
+    fn new(url: impl Into<String>, resp: Response) -> anyhow::Result<Self> {
         let url = url.into();
         let status = resp.status();
         let text = resp.text_with_charset("GBK")?;
@@ -34,7 +34,7 @@ impl WltPage {
         self.status == StatusCode::OK
     }
 
-    pub fn search_ip(&self) -> AnyResult<String> {
+    pub fn search_ip(&self) -> anyhow::Result<String> {
         let ip = match self.page_type()? {
             WltPageType::LoginPage => get_str_between(&self.text, "name=ip value=", ">"),
             WltPageType::ControlPage => get_str_between(&self.text, "当前IP地址", "状态"),
@@ -43,13 +43,16 @@ impl WltPage {
         Ok(ip)
     }
 
-    pub fn page_type(&self) -> AnyResult<WltPageType> {
+    pub fn page_type(&self) -> anyhow::Result<WltPageType> {
         if self.text.contains("网络通账号登录") {
             Ok(WltPageType::LoginPage)
         } else if self.text.contains("访问文献资源建议使用1出口") {
             Ok(WltPageType::ControlPage)
         } else {
-            Err(format!("未知类型页面\nurl: {}\ntext: {}", self.url, self.text).into())
+            anyhow::bail!(format!(
+                "未知类型页面\nurl: {}\ntext: {}",
+                self.url, self.text
+            ))
         }
     }
 }
@@ -64,7 +67,7 @@ pub struct WltClient {
 }
 
 impl WltClient {
-    pub fn new(name: &str, password: &str, type_: u8, exp: u32, rn: &str) -> AnyResult<Self> {
+    pub fn new(name: &str, password: &str, type_: u8, exp: u32, rn: &str) -> anyhow::Result<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(5))
             .no_proxy()
@@ -93,7 +96,7 @@ impl WltClient {
         &self.rn
     }
 
-    fn update_rn(&mut self, resp: &Response) -> AnyResult<()> {
+    fn update_rn(&mut self, resp: &Response) -> anyhow::Result<()> {
         if let Some(set_cookie) = resp.headers().get(SET_COOKIE) {
             let set_cookie = set_cookie.to_str()?;
             if let Some(rn) = set_cookie.strip_prefix("rn=") {
@@ -103,7 +106,7 @@ impl WltClient {
         Ok(())
     }
 
-    pub fn access_page(&mut self) -> AnyResult<WltPage> {
+    pub fn access_page(&mut self) -> anyhow::Result<WltPage> {
         let resp = self
             .client
             .get(WLT_URL)
@@ -113,19 +116,18 @@ impl WltClient {
         if wlt_page.check_ok() {
             Ok(wlt_page)
         } else {
-            Err(format!(
+            anyhow::bail!(format!(
                 "访问网络通页面失败\nurl: {}\nstatus: {}\ntext: {}",
                 WLT_URL, wlt_page.status, wlt_page.text
-            )
-            .into())
+            ))
         }
     }
 
-    pub fn login(&mut self, ip: &str) -> AnyResult<WltPage> {
+    pub fn login(&mut self, ip: &str) -> anyhow::Result<WltPage> {
         if self.name.is_empty() {
-            return Err("输入的用户名为空".into());
+            anyhow::bail!("输入的用户名为空");
         } else if self.password.is_empty() {
-            return Err("输入的密码为空".into());
+            anyhow::bail!("输入的密码为空");
         }
 
         let name = self.name.to_owned();
@@ -151,21 +153,20 @@ impl WltClient {
         let wlt_page = WltPage::new(WLT_URL, resp)?;
         for err_str in ["用户名不存在", "用户名或密码错误"] {
             if wlt_page.text.contains(err_str) {
-                return Err(err_str.into());
+                anyhow::bail!(err_str);
             }
         }
         if wlt_page.status != StatusCode::OK {
-            Err(format!(
+            anyhow::bail!(format!(
                 "登录账户失败\nurl: {}\nform: {:?}\nstatus: {}\ntext: {}",
                 WLT_URL, login_form, wlt_page.status, wlt_page.text
-            )
-            .into())
+            ))
         } else {
             Ok(wlt_page)
         }
     }
 
-    pub fn set_wlt(&mut self) -> AnyResult<WltPage> {
+    pub fn set_wlt(&mut self) -> anyhow::Result<WltPage> {
         let go = GBK.encode("开通网络").0;
         let go = &urlencoding::encode_binary(&go);
         let url = format!(
@@ -181,14 +182,13 @@ impl WltClient {
         if wlt_page.text.contains("信息：网络设置成功") {
             Ok(wlt_page)
         } else {
-            Err(format!(
+            anyhow::bail!(format!(
                 "开通网络失败\nurl: {}\ncookies: {}\nstatus: {}\ntext: {}",
                 url,
                 self.get_cookie(),
                 wlt_page.status,
                 wlt_page.text
-            )
-            .into())
+            ))
         }
     }
 }

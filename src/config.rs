@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::{str_decrypt, substr_encrypt, AnyResult};
+use crate::utils::{str_decrypt, substr_encrypt};
 
 const CONFIG_PATH: &str = "config.toml";
 const CONFIG_COMMENT: &str = r#"
@@ -63,7 +63,7 @@ impl Default for Config {
 }
 
 impl Config {
-    fn save(&self) -> AnyResult<()> {
+    fn save(&self) -> anyhow::Result<()> {
         let config_string = toml::to_string_pretty(self)?;
         let config_string = substr_encrypt(config_string, &self.password)?;
         let config_string = substr_encrypt(config_string, &self.email_password)?;
@@ -72,7 +72,7 @@ impl Config {
         Ok(())
     }
 
-    pub fn load() -> AnyResult<Self> {
+    pub fn load() -> anyhow::Result<Self> {
         let path = std::path::Path::new(CONFIG_PATH);
         if !path.exists() || path.metadata().unwrap().len() == 0 {
             let config = Config::default();
