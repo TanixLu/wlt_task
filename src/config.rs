@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::{get_machine_uid, str_decode, str_encode, AnyResult};
+use crate::utils::{str_decrypt, substr_encrypt, AnyResult};
 
 const CONFIG_PATH: &str = "config.toml";
 const CONFIG_COMMENT: &str = r#"
@@ -22,8 +22,6 @@ const CONFIG_COMMENT: &str = r#"
 #   14400 4小时
 #   39600 11小时
 #   50400 14小时
-# ip：用于记录之前的ip地址，当ip地址变动时，会自动发送邮件通知，这一项不要手动更改
-# rn：Cookie中的一个字段，这一项不要手动更改
 # email_server：邮件服务器地址
 # email_username：邮箱
 # email_password：邮箱密码（SMTP授权码）
@@ -39,8 +37,6 @@ pub struct Config {
     #[serde(rename = "type")]
     pub type_: u8,
     pub exp: u32,
-    pub ip: String,
-    pub rn: String,
     pub email_server: String,
     pub email_username: String,
     pub email_password: String,
@@ -56,8 +52,6 @@ impl Default for Config {
             password: String::new(),
             type_: 8,
             exp: 0,
-            ip: String::new(),
-            rn: String::new(),
             email_server: "smtp.qq.com".to_string(),
             email_username: "10000@qq.com".to_string(),
             email_password: "f0123456789abcdef".to_string(),
@@ -69,12 +63,10 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn save(&self) -> AnyResult<()> {
-        let mut config_string = toml::to_string_pretty(self)?;
-        if !self.password.is_empty() && str_decode(&self.password, get_machine_uid()?).is_err() {
-            let encoded_password = str_encode(&self.password, get_machine_uid()?)?;
-            config_string = config_string.replace(&self.password, &encoded_password);
-        }
+    fn save(&self) -> AnyResult<()> {
+        let config_string = toml::to_string_pretty(self)?;
+        let config_string = substr_encrypt(config_string, &self.password)?;
+        let config_string = substr_encrypt(config_string, &self.email_password)?;
         let content = format!("{}\n{}", config_string, CONFIG_COMMENT);
         std::fs::write(CONFIG_PATH, content)?;
         Ok(())
@@ -87,12 +79,20 @@ impl Config {
             config.save()?;
             Ok(config)
         } else {
-            let config = std::fs::read_to_string(CONFIG_PATH)?;
-            let mut config = toml::from_str::<Config>(&config)?;
-            if let Ok(password) = str_decode(&config.password, get_machine_uid()?) {
-                config.password = password;
+            let content = std::fs::read_to_string(CONFIG_PATH)?;
+            let mut config = toml::from_str::<Config>(&content)?;
+            let mut need_save_to_encrypt = false;
+            if let Ok(plain_password) = str_decrypt(&config.password) {
+                config.password = plain_password;
             } else if !config.password.is_empty() {
-                // encode password
+                need_save_to_encrypt = true;
+            }
+            if let Ok(plain_email_password) = str_decrypt(&config.email_password) {
+                config.email_password = plain_email_password;
+            } else if !config.email_password.is_empty() {
+                need_save_to_encrypt = true;
+            }
+            if need_save_to_encrypt {
                 config.save()?;
             }
 

@@ -36,7 +36,7 @@ pub fn replace_password(
     }
 }
 
-pub fn get_machine_uid() -> AnyResult<String> {
+fn get_machine_uid() -> AnyResult<String> {
     machine_uid::get().map_err(|e| e.to_string().into())
 }
 
@@ -56,20 +56,30 @@ fn default_nonce() -> Nonce {
 }
 
 /// "plain_text" --"key"--> "646839e2fc6b3c89019e92599c8da37475b295045ced51996f62"
-pub fn str_encode(plaintext: impl AsRef<str>, key: impl AsRef<str>) -> AnyResult<String> {
-    cipher_new(str_to_256bits(key))?
+fn str_encrypt(plaintext: impl AsRef<str>) -> AnyResult<String> {
+    cipher_new(str_to_256bits(get_machine_uid()?))?
         .encrypt(&default_nonce(), plaintext.as_ref().as_bytes())
         .map(hex::encode)
         .map_err(|e| e.to_string().into())
 }
 
 /// "646839e2fc6b3c89019e92599c8da37475b295045ced51996f62" --"key"--> "plain_text"
-pub fn str_decode(ciphertext: impl AsRef<str>, key: impl AsRef<str>) -> AnyResult<String> {
-    cipher_new(str_to_256bits(key))?
+pub fn str_decrypt(ciphertext: impl AsRef<str>) -> AnyResult<String> {
+    cipher_new(str_to_256bits(get_machine_uid()?))?
         .decrypt(
             &default_nonce(),
             hex::decode(ciphertext.as_ref())?.as_slice(),
         )
         .map(|b| String::from_utf8_lossy(b.as_slice()).to_string())
         .map_err(|e| e.to_string().into())
+}
+
+pub fn substr_encrypt(text: impl AsRef<str>, substr: impl AsRef<str>) -> AnyResult<String> {
+    if !substr.as_ref().is_empty() && str_decrypt(substr.as_ref()).is_err() {
+        Ok(text
+            .as_ref()
+            .replace(substr.as_ref(), &str_encrypt(substr.as_ref())?))
+    } else {
+        Ok(text.as_ref().to_owned())
+    }
 }

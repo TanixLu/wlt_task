@@ -1,4 +1,4 @@
 /target
-config.toml
+*.toml
 log.txt
 wlt_task.vbs

@@ -1,4 +1,5 @@
 mod config;
+mod data;
 mod email;
 mod log;
 mod task;
@@ -6,6 +7,7 @@ mod utils;
 mod wlt;
 
 use config::Config;
+use data::Data;
 use email::send_email;
 use log::{log, log_append};
 use task::{query_task, set_task, unset_task};
@@ -13,13 +15,15 @@ use utils::{get_str_between, replace_password, AnyResult};
 use wlt::{WltClient, WltPageType};
 
 fn check_wlt() -> AnyResult<()> {
-    let mut config = Config::load()?;
+    let config = Config::load()?;
+    let mut data = Data::load()?;
+
     let mut wlt_client = WltClient::new(
         &config.name,
         &config.password,
-        &config.rn,
         config.type_,
         config.exp,
+        &data.rn,
     )?;
 
     let wlt_page = wlt_client.access_page()?;
@@ -38,14 +42,14 @@ fn check_wlt() -> AnyResult<()> {
         }
         WltPageType::LoginPage => {
             wlt_client.login(&new_ip)?;
-            if wlt_client.get_rn() != config.rn {
+            if wlt_client.get_rn() != data.rn {
                 log(format!(
                     "old_rn: {} new_rn: {}",
-                    config.rn,
+                    data.rn,
                     wlt_client.get_rn()
                 ));
-                config.rn = wlt_client.get_rn().to_owned();
-                config.save()?;
+                data.rn = wlt_client.get_rn().to_owned();
+                data.save()?;
             }
             true
         }
@@ -56,7 +60,7 @@ fn check_wlt() -> AnyResult<()> {
         new_ip = set_wlt_page.search_ip()?
     }
 
-    let old_ip = config.ip.clone();
+    let old_ip = data.ip.clone();
     if new_ip != old_ip {
         log(format!("old_ip: {} new_ip: {}", old_ip, new_ip));
         let body = config
@@ -71,8 +75,8 @@ fn check_wlt() -> AnyResult<()> {
             &config.email_subject,
             &body,
         );
-        config.ip = new_ip;
-        config.save()?;
+        data.ip = new_ip;
+        data.save()?;
     }
 
     log_append(".");

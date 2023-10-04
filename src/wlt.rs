@@ -58,24 +58,24 @@ pub struct WltClient {
     client: Client,
     name: String,
     password: String,
-    rn: String,
     type_: u8,
     exp: u32,
+    rn: String,
 }
 
 impl WltClient {
-    pub fn new(name: &str, password: &str, rn: &str, type_: u8, exp: u32) -> AnyResult<Self> {
+    pub fn new(name: &str, password: &str, type_: u8, exp: u32, rn: &str) -> AnyResult<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(5))
             .no_proxy()
             .build()?;
         Ok(Self {
             client,
-            rn: rn.to_owned(),
             name: name.to_owned(),
             password: password.to_owned(),
             type_,
             exp,
+            rn: rn.to_owned(),
         })
     }
 
