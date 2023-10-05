@@ -140,7 +140,7 @@ fn main() -> anyhow::Result<()> {
                     &config.邮箱用户名,
                     &config.邮箱密码,
                     &config.邮件发送列表,
-                    "WLT Task Error",
+                    "网络通任务出错",
                     &e,
                 );
             } else {

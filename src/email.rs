@@ -14,7 +14,7 @@ pub fn send_email(
     body: &str,
 ) {
     if email_to_list.is_empty() {
-        log("没有设置email_to_list，不发送邮件");
+        log("没有设置\"邮件发送列表\"，不发送邮件");
         return;
     }
 
