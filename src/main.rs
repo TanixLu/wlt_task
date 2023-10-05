@@ -19,10 +19,10 @@ fn check_wlt() -> anyhow::Result<()> {
     let mut data = Data::load()?;
 
     let mut wlt_client = WltClient::new(
-        &config.name,
-        &config.password,
-        config.type_,
-        config.exp,
+        &config.网络通用户名,
+        &config.网络通密码,
+        config.网络通出口,
+        config.网络通使用时限,
         &data.rn,
     )?;
 
@@ -33,10 +33,10 @@ fn check_wlt() -> anyhow::Result<()> {
         WltPageType::ControlPage => {
             let type_text = get_str_between(&wlt_page.text, "出口: ", "网出口")?;
             let type_ = type_text.as_bytes()[0] - b'1';
-            if type_ == config.type_ {
+            if type_ == config.网络通出口 {
                 false
             } else {
-                log(format!("old_type: {} new_type: {}", type_, config.type_));
+                log(format!("旧出口: {} 新出口: {}", type_, config.网络通出口));
                 true
             }
         }
@@ -44,7 +44,7 @@ fn check_wlt() -> anyhow::Result<()> {
             wlt_client.login(&new_ip)?;
             if wlt_client.get_rn() != data.rn {
                 log(format!(
-                    "old_rn: {} new_rn: {}",
+                    "旧rn: {} 新rn: {}",
                     data.rn,
                     wlt_client.get_rn()
                 ));
@@ -62,17 +62,17 @@ fn check_wlt() -> anyhow::Result<()> {
 
     let old_ip = data.ip.clone();
     if new_ip != old_ip {
-        log(format!("old_ip: {} new_ip: {}", old_ip, new_ip));
+        log(format!("旧IP: {} 新IP: {}", old_ip, new_ip));
         let body = config
-            .email_body
-            .replace("{old_ip}", &old_ip)
-            .replace("{new_ip}", &new_ip);
+            .邮件内容
+            .replace("{旧IP}", &old_ip)
+            .replace("{新IP}", &new_ip);
         send_email(
-            &config.email_server,
-            &config.email_username,
-            &config.email_password,
-            &config.email_to_list,
-            &config.email_subject,
+            &config.邮箱服务器,
+            &config.邮箱用户名,
+            &config.邮箱密码,
+            &config.邮件发送列表,
+            &config.邮件主题,
             &body,
         );
         data.ip = new_ip;
@@ -120,26 +120,26 @@ fn main() -> anyhow::Result<()> {
             let mut e = e.to_string();
             if let Ok(mut data) = Data::load() {
                 if e.contains("operation timed out") {
-                    data.timeout_count += 1;
+                    data.连续超时次数 += 1;
                     data.save()?;
-                    if data.timeout_count < 3 {
+                    if data.连续超时次数 < 3 {
                         log_append("?");
                         return Ok(()); // timeout次数大于等于3才通知
                     }
                 } else {
-                    data.timeout_count = 0;
+                    data.连续超时次数 = 0;
                     data.save()?;
                 }
             }
 
             if let Ok(config) = Config::load() {
-                e = replace_password(e, config.password, "***");
+                e = replace_password(e, config.网络通密码, "***");
                 log(&e);
                 send_email(
-                    &config.email_server,
-                    &config.email_username,
-                    &config.email_password,
-                    &config.email_to_list,
+                    &config.邮箱服务器,
+                    &config.邮箱用户名,
+                    &config.邮箱密码,
+                    &config.邮件发送列表,
                     "WLT Task Error",
                     &e,
                 );
