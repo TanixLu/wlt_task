@@ -11,7 +11,7 @@ use data::Data;
 use email::send_email;
 use log::{log, log_append};
 use task::{query_task, set_task, unset_task};
-use utils::{get_str_between, replace_password};
+use utils::{get_range_u32, get_str_between, input_key_to_continue, print_list, replace_password};
 use wlt::{WltClient, WltPageType};
 
 fn check_wlt() -> anyhow::Result<()> {
@@ -84,26 +84,51 @@ fn check_wlt() -> anyhow::Result<()> {
 }
 
 const USAGE: &str = "usage:
-    wlt_task             Log in to WLT and send an email if the IP changes.
-    wlt_task set         Set wlt_task as a scheduled task to run every 5 minutes.
-    wlt_task unset       Unset the scheduled task.
-    wlt_task query       Query the status of the scheduled task.";
+    wlt_task             打开交互界面
+    wlt_task task        登录网络通，如果IP变化，发送邮件通知
+    wlt_task set         设置一个计划任务，每5分钟（或者网络连接的时候）执行一次wlt_task task
+    wlt_task unset       取消这个计划任务
+    wlt_task query       查看计划任务状态";
 
 fn main() -> anyhow::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+    let mut args: Vec<String> = std::env::args().collect();
+    let mut need_pause = false;
     if args.len() == 1 {
+        need_pause = true;
+        println!("请输入选择的数字并回车：");
+        print_list(
+            [
+                "登录网络通，如果IP变化，发送邮件通知（wlt_task task）",
+                "设置一个计划任务，每5分钟（或者网络连接的时候）执行一次wlt_task task（wlt_task set）",
+                "取消这个计划任务（wlt_task unset）",
+                "查看计划任务状态（wlt_task query）",
+            ],
+            1,
+        );
+        let select = get_range_u32(1, 4);
+        match select {
+            1 => args.push("task".to_owned()),
+            2 => args.push("set".to_owned()),
+            3 => args.push("unset".to_owned()),
+            4 => args.push("query".to_owned()),
+            _ => unreachable!(),
+        }
+    }
+
+    if args.len() == 2 && args[1] == "task" {
         if let Err(e) = check_wlt() {
             let mut e = e.to_string();
             if let Ok(mut data) = Data::load() {
                 if e.contains("operation timed out") {
                     data.timeout_count += 1;
+                    data.save()?;
+                    if data.timeout_count < 3 {
+                        log_append("?");
+                        return Ok(()); // timeout次数大于等于3才通知
+                    }
                 } else {
                     data.timeout_count = 0;
-                }
-                data.save()?;
-                if data.timeout_count < 3 {
-                    log_append("?");
-                    return Ok(()); // timeout次数大于等于3才通知
+                    data.save()?;
                 }
             }
 
@@ -134,5 +159,8 @@ fn main() -> anyhow::Result<()> {
         println!("{}", USAGE);
     }
 
+    if need_pause {
+        input_key_to_continue("", "按回车键退出...");
+    }
     Ok(())
 }

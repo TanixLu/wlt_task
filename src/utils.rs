@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use aes_gcm_siv::{aead::Aead, Aes256GcmSiv, Nonce};
 use anyhow::Context;
 use blake2::{Blake2s256, Digest};
@@ -80,5 +82,39 @@ pub fn substr_encrypt(text: impl AsRef<str>, substr: impl AsRef<str>) -> anyhow:
             .replace(substr.as_ref(), &str_encrypt(substr.as_ref())?))
     } else {
         Ok(text.as_ref().to_owned())
+    }
+}
+
+pub fn print_list(texts: impl IntoIterator<Item = impl Display>, start_index: i32) {
+    let mut i = start_index;
+    for s in texts {
+        println!("{i}. {s}");
+        i += 1;
+    }
+}
+
+pub fn get_range_u32(l: u32, r: u32) -> u32 {
+    loop {
+        let mut buf = String::new();
+        std::io::stdin()
+            .read_line(&mut buf)
+            .expect("read line failed");
+        match buf.trim().parse::<u32>() {
+            Ok(i) if i >= l && i <= r => return i,
+            _ => (),
+        }
+    }
+}
+
+pub fn input_key_to_continue(key: &str, text: &str) {
+    println!("{text}");
+    loop {
+        let mut buf = String::new();
+        std::io::stdin()
+            .read_line(&mut buf)
+            .expect("failed to read line");
+        if buf.trim() == key {
+            break;
+        }
     }
 }
