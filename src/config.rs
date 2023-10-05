@@ -24,7 +24,7 @@ const CONFIG_COMMENT: &str = r#"
 #   50400 14小时
 # email_server：邮件服务器地址
 # email_username：邮箱
-# email_password：邮箱密码（SMTP授权码）
+# email_password：邮箱（加密）密码（SMTP授权码）
 # email_to_list：邮件发送列表，可以填自己的邮箱，如["10000@qq.com", "10000@mail.ustc.edu.cn"]，留空则禁用邮件功能
 # email_subject：邮件主题（标题）
 # email_body：邮件内容，其中的{old_ip}会被替换为旧的ip，{new_ip}会被替换为新的ip

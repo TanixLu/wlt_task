@@ -4,12 +4,14 @@ const DATA_PATH: &str = "data.toml";
 const DATA_COMMENT: &str = r#"
 # ip：用于记录之前的ip地址，当ip地址变动时，会自动发送邮件通知
 # rn：Cookie中的一个字段
+# time_out_count: timeout次数
 "#;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Data {
     pub ip: String,
     pub rn: String,
+    pub timeout_count: u32,
 }
 
 impl Data {

@@ -94,6 +94,19 @@ fn main() -> anyhow::Result<()> {
     if args.len() == 1 {
         if let Err(e) = check_wlt() {
             let mut e = e.to_string();
+            if let Ok(mut data) = Data::load() {
+                if e.contains("operation timed out") {
+                    data.timeout_count += 1;
+                } else {
+                    data.timeout_count = 0;
+                }
+                data.save()?;
+                if data.timeout_count < 3 {
+                    log_append("?");
+                    return Ok(()); // timeout次数大于等于3才通知
+                }
+            }
+
             if let Ok(config) = Config::load() {
                 e = replace_password(e, config.password, "***");
                 log(&e);
