@@ -85,8 +85,8 @@ fn check_wlt() -> anyhow::Result<()> {
 
 const USAGE: &str = "usage:
     wlt_task             打开交互界面
-    wlt_task task        登录网络通，如果IP变化，发送邮件通知
-    wlt_task set         设置一个计划任务，每5分钟（或者网络连接的时候）执行一次wlt_task task
+    wlt_task run         登录网络通，如果IP变化，发送邮件通知
+    wlt_task set         设置一个计划任务，每5分钟（或者网络连接的时候）执行一次wlt_task run
     wlt_task unset       取消这个计划任务
     wlt_task query       查看计划任务状态";
 
@@ -98,8 +98,8 @@ fn main() -> anyhow::Result<()> {
         println!("请输入选择的数字并回车：");
         print_list(
             [
-                "登录网络通，如果IP变化，发送邮件通知（wlt_task task）",
-                "设置一个计划任务，每5分钟（或者网络连接的时候）执行一次wlt_task task（wlt_task set）",
+                "登录网络通，如果IP变化，发送邮件通知（wlt_task run）",
+                "设置一个计划任务，每5分钟（或者网络连接的时候）执行一次wlt_task run（wlt_task set）",
                 "取消这个计划任务（wlt_task unset）",
                 "查看计划任务状态（wlt_task query）",
             ],
@@ -107,7 +107,7 @@ fn main() -> anyhow::Result<()> {
         );
         let select = get_range_u32(1, 4);
         match select {
-            1 => args.push("task".to_owned()),
+            1 => args.push("run".to_owned()),
             2 => args.push("set".to_owned()),
             3 => args.push("unset".to_owned()),
             4 => args.push("query".to_owned()),
@@ -115,7 +115,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    if args.len() == 2 && args[1] == "task" {
+    if args.len() == 2 && args[1] == "run" {
         if let Err(e) = check_wlt() {
             let mut e = e.to_string();
             if let Ok(mut data) = Data::load() {

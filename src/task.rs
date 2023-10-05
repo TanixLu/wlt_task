@@ -18,7 +18,7 @@ fn make_task_vbs_file() -> anyhow::Result<()> {
     let current_exe = std::env::current_exe()?;
     let contents = format!(
         r#"Set wShell = CreateObject("WScript.Shell")
-wShell.Run "cmd /c {} task", 0
+wShell.Run "cmd /c {} run", 0
 "#,
         current_exe.to_string_lossy()
     );
