@@ -43,11 +43,7 @@ fn check_wlt() -> anyhow::Result<()> {
         WltPageType::LoginPage => {
             wlt_client.login(&new_ip)?;
             if wlt_client.get_rn() != data.rn {
-                log(format!(
-                    "旧rn: {} 新rn: {}",
-                    data.rn,
-                    wlt_client.get_rn()
-                ));
+                log(format!("旧rn: {} 新rn: {}", data.rn, wlt_client.get_rn()));
                 data.rn = wlt_client.get_rn().to_owned();
                 data.save()?;
             }
@@ -78,6 +74,9 @@ fn check_wlt() -> anyhow::Result<()> {
         data.ip = new_ip;
         data.save()?;
     }
+
+    data.连续超时次数 = 0;
+    data.save()?;
 
     log_append(".");
     Ok(())
@@ -126,9 +125,6 @@ fn main() -> anyhow::Result<()> {
                         log_append("?");
                         return Ok(()); // timeout次数大于等于3才通知
                     }
-                } else {
-                    data.连续超时次数 = 0;
-                    data.save()?;
                 }
             }
 
@@ -160,7 +156,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     if need_pause {
-        input_key_to_continue("", "按回车键退出...");
+        input_key_to_continue("", "\n按回车键退出...");
     }
     Ok(())
 }
