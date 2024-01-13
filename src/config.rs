@@ -27,7 +27,7 @@ const CONFIG_COMMENT: &str = r#"
 # 邮箱密码：一般是SMTP授权码，如f0123456789abcdef，运行程序后，这个密码会被加密
 # 邮件发送列表：可以填自己的邮箱，如["10000@qq.com", "10000@mail.ustc.edu.cn"]，留空则禁用邮件功能
 # 邮件主题：也即邮件标题
-# 邮件内容：其中的{旧IP}会被替换为旧的ip，{新IP}会被替换为新的ip，{新IPV6}会被替换为新的ipv6
+# 邮件内容：其中的{新IPv4}等会被替换为相应的IP地址
 "#;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,7 +56,12 @@ impl Default for Config {
             邮箱密码: "f0123456789abcdef".to_string(),
             邮件发送列表: Vec::new(),
             邮件主题: "网络通IP变化通知".to_string(),
-            邮件内容: "旧IP: {旧IP}\n新IP: {新IP}\n新IPV6: {新IPV6}\n".to_string(),
+            邮件内容: "\
+旧IPv4: {旧IPv4}
+旧IPv6: {旧IPv6}
+新IPv4: {新IPv4}
+新IPv6: {新IPv6}
+".to_string(),
         }
     }
 }

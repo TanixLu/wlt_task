@@ -29,7 +29,7 @@ fn check_wlt() -> anyhow::Result<()> {
     )?;
 
     let wlt_page = wlt_client.access_page()?;
-    let mut new_ip = wlt_page.search_ip()?;
+    let mut new_ipv4 = wlt_page.search_ip()?;
 
     let need_set_wlt = match wlt_page.page_type()? {
         WltPageType::ControlPage => {
@@ -43,7 +43,7 @@ fn check_wlt() -> anyhow::Result<()> {
             }
         }
         WltPageType::LoginPage => {
-            wlt_client.login(&new_ip)?;
+            wlt_client.login(&new_ipv4)?;
             if wlt_client.get_rn() != data.rn {
                 log(format!("旧rn: {} 新rn: {}", data.rn, wlt_client.get_rn()));
                 data.rn = wlt_client.get_rn().to_owned();
@@ -55,21 +55,20 @@ fn check_wlt() -> anyhow::Result<()> {
 
     if need_set_wlt {
         let set_wlt_page = wlt_client.set_wlt()?;
-        new_ip = set_wlt_page.search_ip()?
+        new_ipv4 = set_wlt_page.search_ip()?
     }
 
-    let old_ip = data.ip.clone();
-    if new_ip != old_ip {
-        let new_ipv6 = get_ipv6();
-        log(format!(
-            "旧IP: {} 新IP: {} 新IPV6: {}",
-            old_ip, new_ip, new_ipv6
-        ));
+    let old_ipv4 = data.ipv4.clone();
+    let old_ipv6 = data.ipv6.clone();
+    let new_ipv6 = get_ipv6();
+    if new_ipv4 != old_ipv4 || new_ipv6 != old_ipv6 {
         let body = config
             .邮件内容
-            .replace("{旧IP}", &old_ip)
-            .replace("{新IP}", &new_ip)
-            .replace("{新IPV6}", &new_ipv6);
+            .replace("{旧IPv4}", &old_ipv4)
+            .replace("{旧IPv6}", &old_ipv6)
+            .replace("{新IPv4}", &new_ipv4)
+            .replace("{新IPv6}", &new_ipv6);
+        log(body.replace("\n", " "));
         send_email(
             &config.邮箱服务器,
             &config.邮箱用户名,
@@ -78,7 +77,8 @@ fn check_wlt() -> anyhow::Result<()> {
             &config.邮件主题,
             &body,
         );
-        data.ip = new_ip;
+        data.ipv4 = new_ipv4;
+        data.ipv6 = new_ipv6;
         data.save()?;
     }
 
@@ -128,9 +128,9 @@ fn main() -> anyhow::Result<()> {
                 if e.contains("operation timed out") {
                     data.连续超时次数 += 1;
                     data.save()?;
-                    if data.连续超时次数 < 3 {
+                    if data.连续超时次数 % 3 != 0 {
                         log_append("?");
-                        return Ok(()); // timeout次数大于等于3才通知
+                        return Ok(()); // timeout次数是3的倍数才通知
                     }
                 }
             }
