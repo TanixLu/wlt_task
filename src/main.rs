@@ -11,7 +11,9 @@ use data::Data;
 use email::send_email;
 use log::{log, log_append};
 use task::{query_task, set_task, unset_task};
-use utils::{get_range_u32, get_str_between, input_key_to_continue, print_list, replace_password};
+use utils::{
+    get_ipv6, get_range_u32, get_str_between, input_key_to_continue, print_list, replace_password,
+};
 use wlt::{WltClient, WltPageType};
 
 fn check_wlt() -> anyhow::Result<()> {
@@ -58,11 +60,16 @@ fn check_wlt() -> anyhow::Result<()> {
 
     let old_ip = data.ip.clone();
     if new_ip != old_ip {
-        log(format!("旧IP: {} 新IP: {}", old_ip, new_ip));
+        let new_ipv6 = get_ipv6();
+        log(format!(
+            "旧IP: {} 新IP: {} 新IPV6: {}",
+            old_ip, new_ip, new_ipv6
+        ));
         let body = config
             .邮件内容
             .replace("{旧IP}", &old_ip)
-            .replace("{新IP}", &new_ip);
+            .replace("{新IP}", &new_ip)
+            .replace("{新IPV6}", &new_ipv6);
         send_email(
             &config.邮箱服务器,
             &config.邮箱用户名,
