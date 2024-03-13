@@ -60,7 +60,11 @@ fn check_wlt() -> anyhow::Result<()> {
 
     let old_ipv4 = data.ipv4.clone();
     let old_ipv6 = data.ipv6.clone();
-    let new_ipv6 = get_ipv6();
+    let new_ipv6 = if config.检测IPv6 {
+        get_ipv6()
+    } else {
+        old_ipv6.clone()
+    };
     if new_ipv4 != old_ipv4 || new_ipv6 != old_ipv6 {
         let body = config
             .邮件内容

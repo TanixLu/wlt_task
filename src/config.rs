@@ -42,6 +42,7 @@ pub struct Config {
     pub 邮件发送列表: Vec<String>,
     pub 邮件主题: String,
     pub 邮件内容: String,
+    pub 检测IPv6: bool,
 }
 
 impl Default for Config {
@@ -61,7 +62,9 @@ impl Default for Config {
 旧IPv6: {旧IPv6}
 新IPv4: {新IPv4}
 新IPv6: {新IPv6}
-".to_string(),
+"
+            .to_string(),
+            检测IPv6: true,
         }
     }
 }
