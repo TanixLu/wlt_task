@@ -119,12 +119,7 @@ pub fn input_key_to_continue(key: &str, text: &str) {
     }
 }
 
-pub fn get_ipv6() -> String {
+pub fn get_ipv6() -> anyhow::Result<String> {
     use reqwest::blocking::get;
-    if let Ok(resp) = get("http://api6.ipify.org/") {
-        if let Ok(text) = resp.text() {
-            return text;
-        }
-    }
-    "".to_string()
+    Ok(get("http://api6.ipify.org/")?.text()?)
 }
