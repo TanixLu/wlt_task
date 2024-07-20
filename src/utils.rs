@@ -120,9 +120,11 @@ pub fn input_key_to_continue(key: &str, text: &str) {
 }
 
 pub fn get_ipv6() -> String {
-    use local_ip_address::local_ipv6;
-    match local_ipv6() {
-        Ok(ipv6) => ipv6.to_string(),
-        _ => "".to_string(),
+    use reqwest::blocking::get;
+    if let Ok(resp) = get("http://api6.ipify.org/") {
+        if let Ok(text) = resp.text() {
+            return text;
+        }
     }
+    "".to_string()
 }
